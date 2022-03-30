@@ -8,6 +8,7 @@ import io
 import json
 import os
 import pathlib
+import pickle5
 import pickle
 import warnings
 import zipfile

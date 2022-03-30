@@ -2,7 +2,7 @@ import argparse
 import importlib
 import json
 import os
-import pickle
+import pickle5 as pickle
 import sys
 import time
 
@@ -25,7 +25,7 @@ from icrl.true_constraint_net import get_true_cost_function, null_cost
 def load_expert_data(expert_path, num_rollouts):
     expert_mean_reward = []
     for i in range(num_rollouts):
-        with open(os.path.join(expert_path, "files/EXPERT/rollouts", "%s.pkl"%str(i)), "rb") as f:
+        with open(os.path.join(expert_path, "files/EXPERT/rollouts", "%s.pkl" % str(i)), "rb") as f:
             data = pickle.load(f)
 
         if i == 0:
@@ -38,9 +38,10 @@ def load_expert_data(expert_path, num_rollouts):
         expert_mean_reward.append(data['rewards'])
 
     expert_mean_reward = np.mean(expert_mean_reward)
-    expert_mean_length = expert_obs.shape[0]/num_rollouts
+    expert_mean_length = expert_obs.shape[0] / num_rollouts
 
     return (expert_obs, expert_acs), expert_mean_reward
+
 
 def icrl(config):
     # We only want to use cost wrapper for custom environments
@@ -79,37 +80,37 @@ def icrl(config):
 
     # Load expert data
     (expert_obs, expert_acs), expert_mean_reward = load_expert_data(config.expert_path, config.expert_rollouts)
-    expert_agent = PPOLagrangian.load(os.path.join(config.expert_path, "files/best_model.zip"))
+    # expert_agent = PPOLagrangian.load(os.path.join(config.expert_path, "files/best_model.zip"))
 
     # Logger
     icrl_logger = logger.HumanOutputFormat(sys.stdout)
 
     # Initialize constraint net, true constraint net
-    cn_lr_schedule = lambda x : (config.anneal_clr_by_factor**(config.n_iters*(1 - x))) * config.cn_learning_rate
+    cn_lr_schedule = lambda x: (config.anneal_clr_by_factor ** (config.n_iters * (1 - x))) * config.cn_learning_rate
     constraint_net = ConstraintNet(
-            obs_dim,
-            acs_dim,
-            config.cn_layers,
-            config.cn_batch_size,
-            cn_lr_schedule,
-            expert_obs,
-            expert_acs,
-            is_discrete,
-            config.cn_reg_coeff,
-            config.cn_obs_select_dim,
-            config.cn_acs_select_dim,
-            no_importance_sampling=config.no_importance_sampling,
-            per_step_importance_sampling=config.per_step_importance_sampling,
-            clip_obs=config.clip_obs,
-            initial_obs_mean=None if not config.cn_normalize else np.zeros(obs_dim),
-            initial_obs_var=None if not config.cn_normalize else np.ones(obs_dim),
-            action_low=action_low,
-            action_high=action_high,
-            target_kl_old_new=config.cn_target_kl_old_new,
-            target_kl_new_old=config.cn_target_kl_new_old,
-            train_gail_lambda=config.train_gail_lambda,
-            eps=config.cn_eps,
-            device=config.device
+        obs_dim,
+        acs_dim,
+        config.cn_layers,
+        config.cn_batch_size,
+        cn_lr_schedule,
+        expert_obs,
+        expert_acs,
+        is_discrete,
+        config.cn_reg_coeff,
+        config.cn_obs_select_dim,
+        config.cn_acs_select_dim,
+        no_importance_sampling=config.no_importance_sampling,
+        per_step_importance_sampling=config.per_step_importance_sampling,
+        clip_obs=config.clip_obs,
+        initial_obs_mean=None if not config.cn_normalize else np.zeros(obs_dim),
+        initial_obs_var=None if not config.cn_normalize else np.ones(obs_dim),
+        action_low=action_low,
+        action_high=action_high,
+        target_kl_old_new=config.cn_target_kl_old_new,
+        target_kl_new_old=config.cn_target_kl_new_old,
+        train_gail_lambda=config.train_gail_lambda,
+        eps=config.cn_eps,
+        device=config.device
     )
 
     # Pass constraint net cost function to cost wrapper (train env)
@@ -131,49 +132,49 @@ def icrl(config):
 
     # Plot True cost function and expert samples
     plot_constraints(
-            true_cost_function, eval_env, config.eval_env_id, constraint_net.select_dim,
-            obs_dim, acs_dim, os.path.join(config.save_dir, "true_constraint_net.png"),
-            observations=obs
+        true_cost_function, eval_env, config.eval_env_id, constraint_net.select_dim,
+        obs_dim, acs_dim, os.path.join(config.save_dir, "true_constraint_net.png"),
+        observations=obs
     )
 
     # Initialize agent
     create_nominal_agent = lambda: PPOLagrangian(
-            policy=config.policy_name,
-            env=train_env,
-            learning_rate=config.learning_rate,
-            n_steps=config.n_steps,
-            batch_size=config.batch_size,
-            n_epochs=config.n_epochs,
-            reward_gamma=config.reward_gamma,
-            reward_gae_lambda=config.reward_gae_lambda,
-            cost_gamma=config.cost_gamma,
-            cost_gae_lambda=config.cost_gae_lambda,
-            clip_range=config.clip_range,
-            clip_range_reward_vf=config.clip_range_reward_vf,
-            clip_range_cost_vf=config.clip_range_cost_vf,
-            ent_coef=config.ent_coef,
-            reward_vf_coef=config.reward_vf_coef,
-            cost_vf_coef=config.cost_vf_coef,
-            max_grad_norm=config.max_grad_norm,
-            use_sde=config.use_sde,
-            sde_sample_freq=config.sde_sample_freq,
-            target_kl=config.target_kl,
-            penalty_initial_value=config.penalty_initial_value,
-            penalty_learning_rate=config.penalty_learning_rate,
-            budget=config.budget,
-            seed=config.seed,
-            device=config.device,
-            verbose=0,
-            pid_kwargs=dict(alpha=config.budget,
-                            penalty_init=config.penalty_initial_value,
-                            Kp=config.proportional_control_coeff,
-                            Ki=config.integral_control_coeff,
-                            Kd=config.derivative_control_coeff,
-                            pid_delay=config.pid_delay,
-                            delta_p_ema_alpha=config.proportional_cost_ema_alpha,
-                            delta_d_ema_alpha=config.derivative_cost_ema_alpha,),
-            policy_kwargs=dict(net_arch=utils.get_net_arch(config))
-            )
+        policy=config.policy_name,
+        env=train_env,
+        learning_rate=config.learning_rate,
+        n_steps=config.n_steps,
+        batch_size=config.batch_size,
+        n_epochs=config.n_epochs,
+        reward_gamma=config.reward_gamma,
+        reward_gae_lambda=config.reward_gae_lambda,
+        cost_gamma=config.cost_gamma,
+        cost_gae_lambda=config.cost_gae_lambda,
+        clip_range=config.clip_range,
+        clip_range_reward_vf=config.clip_range_reward_vf,
+        clip_range_cost_vf=config.clip_range_cost_vf,
+        ent_coef=config.ent_coef,
+        reward_vf_coef=config.reward_vf_coef,
+        cost_vf_coef=config.cost_vf_coef,
+        max_grad_norm=config.max_grad_norm,
+        use_sde=config.use_sde,
+        sde_sample_freq=config.sde_sample_freq,
+        target_kl=config.target_kl,
+        penalty_initial_value=config.penalty_initial_value,
+        penalty_learning_rate=config.penalty_learning_rate,
+        budget=config.budget,
+        seed=config.seed,
+        device=config.device,
+        verbose=0,
+        pid_kwargs=dict(alpha=config.budget,
+                        penalty_init=config.penalty_initial_value,
+                        Kp=config.proportional_control_coeff,
+                        Ki=config.integral_control_coeff,
+                        Kd=config.derivative_control_coeff,
+                        pid_delay=config.pid_delay,
+                        delta_p_ema_alpha=config.proportional_cost_ema_alpha,
+                        delta_d_ema_alpha=config.derivative_cost_ema_alpha, ),
+        policy_kwargs=dict(net_arch=utils.get_net_arch(config))
+    )
     nominal_agent = create_nominal_agent()
 
     # Callbacks
@@ -188,26 +189,27 @@ def icrl(config):
         print(utils.colorize("\nWarming up", color="green", bold=True))
         with utils.ProgressBarManager(config.warmup_timesteps) as callback:
             nominal_agent.learn(total_timesteps=config.warmup_timesteps,
-                                cost_function=null_cost, # During warmup we dont want to incur any cost
+                                cost_function=null_cost,  # During warmup we dont want to incur any cost
                                 callback=callback)
             timesteps += nominal_agent.num_timesteps
 
     # Train
     start_time = time.time()
     print(utils.colorize("\nBeginning training", color="green", bold=True), flush=True)
-    best_true_reward, best_true_cost, best_forward_kl, best_reverse_kl = -np.inf, np.inf, np.inf, np.inf
+    # best_true_reward, best_true_cost, best_forward_kl, best_reverse_kl = -np.inf, np.inf, np.inf, np.inf
+    best_true_reward, best_true_cost = -np.inf, np.inf
     for itr in range(config.n_iters):
         if config.reset_policy and itr != 0:
             print(utils.colorize("Resetting agent", color="green", bold=True), flush=True)
             nominal_agent = create_nominal_agent()
-        current_progress_remaining = 1-float(itr)/float(config.n_iters)
+        current_progress_remaining = 1 - float(itr) / float(config.n_iters)
 
         # Update agent
         with utils.ProgressBarManager(config.forward_timesteps) as callback:
             nominal_agent.learn(
-                    total_timesteps=config.forward_timesteps,
-                    cost_function="cost",         # Cost should come from cost wrapper
-                    callback=[callback]+all_callbacks
+                total_timesteps=config.forward_timesteps,
+                cost_function="cost",  # Cost should come from cost wrapper
+                callback=[callback] + all_callbacks
             )
             forward_metrics = logger.Logger.CURRENT.name_to_value
             timesteps += nominal_agent.num_timesteps
@@ -215,7 +217,7 @@ def icrl(config):
         # Sample nominal trajectories
         sync_envs_normalization(train_env, sampling_env)
         orig_observations, observations, actions, rewards, lengths = utils.sample_from_agent(
-                nominal_agent, sampling_env, config.expert_rollouts)
+            nominal_agent, sampling_env, config.expert_rollouts)
 
         # Plot constraint net periodically
         if itr % config.cn_plot_every == 0:
@@ -223,10 +225,10 @@ def icrl(config):
             if config.clip_obs is not None:
                 obs_for_plot = np.clip(obs_for_plot, -config.clip_obs, config.clip_obs)
             plot_constraints(constraint_net.cost_function, eval_env, config.eval_env_id, constraint_net.select_dim,
-                    obs_dim, acs_dim, os.path.join(cn_plot_dir, "%d.png"%itr), observations=obs_for_plot)
+                             obs_dim, acs_dim, os.path.join(cn_plot_dir, "%d.png" % itr), observations=obs_for_plot)
 
-            if config.train_env_id =='AntWall-v0':
-                plot_obs_ant(obs_for_plot, os.path.join(other_plot_dir, "%d.png"%itr))
+            if config.train_env_id == 'AntWall-v0':
+                plot_obs_ant(obs_for_plot, os.path.join(other_plot_dir, "%d.png" % itr))
 
         # Update constraint net
         mean, var = None, None
@@ -241,15 +243,15 @@ def icrl(config):
         # Evaluate:
         # (1): True cost on nominal environment
         average_true_cost = np.mean(true_cost_function(orig_observations, actions))
-        samples_behind = np.mean(orig_observations[...,0] < -3)
-        samples_infront = np.mean(orig_observations[...,0] > 3)
+        samples_behind = np.mean(orig_observations[..., 0] < -3)
+        samples_infront = np.mean(orig_observations[..., 0] > 3)
         # (2): Reward on true environment
         sync_envs_normalization(train_env, eval_env)
         average_true_reward, std_true_reward = evaluate_policy(nominal_agent, eval_env, n_eval_episodes=10,
                                                                deterministic=False)
         # (3): KLs
-        forward_kl = utils.compute_kl(nominal_agent, expert_obs, expert_acs, expert_agent)
-        reverse_kl = utils.compute_kl(expert_agent, orig_observations, actions, nominal_agent)
+        # forward_kl = utils.compute_kl(nominal_agent, expert_obs, expert_acs, expert_agent)
+        # reverse_kl = utils.compute_kl(expert_agent, orig_observations, actions, nominal_agent)
 
         # Save:
         # (1): Periodically
@@ -273,35 +275,35 @@ def icrl(config):
             best_true_reward = average_true_reward
         if average_true_cost < best_true_cost:
             best_true_cost = average_true_cost
-        if forward_kl < best_forward_kl:
-            best_forward_kl = forward_kl
-        if reverse_kl < best_reverse_kl:
-            best_reverse_kl = reverse_kl
+        # if forward_kl < best_forward_kl:
+        #     best_forward_kl = forward_kl
+        # if reverse_kl < best_reverse_kl:
+        #     best_reverse_kl = reverse_kl
 
         # Collect metrics
         metrics = {
-                "time(m)": (time.time()-start_time)/60,
-                "iteration": itr,
-                "timesteps": timesteps,
-                "true/reward": average_true_reward,
-                "true/reward_std": std_true_reward,
-                "true/cost": average_true_cost,
-                "true/samples_infront": samples_infront,
-                "true/samples_behind": samples_behind,
-                "true/forward_kl": forward_kl,
-                "true/reverse_kl": reverse_kl,
-                "best_true/best_reward": best_true_reward,
-                "best_true/best_cost": best_true_cost,
-                "best_true/best_forward_kl": best_forward_kl,
-                "best_true/best_reverse_kl": best_reverse_kl
-                }
+            "time(m)": (time.time() - start_time) / 60,
+            "iteration": itr,
+            "timesteps": timesteps,
+            "true/reward": average_true_reward,
+            "true/reward_std": std_true_reward,
+            "true/cost": average_true_cost,
+            "true/samples_infront": samples_infront,
+            "true/samples_behind": samples_behind,
+            # "true/forward_kl": forward_kl,
+            # "true/reverse_kl": reverse_kl,
+            "best_true/best_reward": best_true_reward,
+            "best_true/best_cost": best_true_cost,
+            # "best_true/best_forward_kl": best_forward_kl,
+            # "best_true/best_reverse_kl": best_reverse_kl
+        }
         metrics.update({k.replace("train/", "forward/"): v for k, v in forward_metrics.items()})
         metrics.update(backward_metrics)
 
         # Log
         if config.verbose > 0:
             icrl_logger.write(metrics, {k: None for k in metrics.keys()}, step=itr)
-        wandb.log(metrics)
+        # wandb.log(metrics)
 
     # Make video of final model
     if not config.wandb_sweep:
@@ -310,6 +312,7 @@ def icrl(config):
 
     if config.sync_wandb:
         utils.sync_wandb(config.save_dir, 120)
+
 
 def main():
     start = time.time()
@@ -340,9 +343,9 @@ def main():
     # ======================== Networks ============================== #
     parser.add_argument("--policy_name", "-pn", type=str, default="TwoCriticsMlpPolicy")
     parser.add_argument("--shared_layers", "-sl", type=int, default=None, nargs='*')
-    parser.add_argument("--policy_layers", "-pl", type=int, default=[64,64], nargs='*')
-    parser.add_argument("--reward_vf_layers", "-rvl", type=int, default=[64,64], nargs='*')
-    parser.add_argument("--cost_vf_layers", "-cvl", type=int, default=[64,64], nargs='*')
+    parser.add_argument("--policy_layers", "-pl", type=int, default=[64, 64], nargs='*')
+    parser.add_argument("--reward_vf_layers", "-rvl", type=int, default=[64, 64], nargs='*')
+    parser.add_argument("--cost_vf_layers", "-cvl", type=int, default=[64, 64], nargs='*')
     # ========================= Training ============================ #
     parser.add_argument("--n_steps", "-ns", type=int, default=2048)
     parser.add_argument("--batch_size", "-bs", type=int, default=64)
@@ -398,7 +401,7 @@ def main():
     parser.add_argument('--per_step_importance_sampling', '-psis', action='store_true')
     parser.add_argument('--reset_policy', '-rp', action='store_true')
     # ====================== Constraint Net ========================= #
-    parser.add_argument("--cn_layers", "-cl", type=int, default=[64,64], nargs='*')
+    parser.add_argument("--cn_layers", "-cl", type=int, default=[64, 64], nargs='*')
     parser.add_argument("--anneal_clr_by_factor", "-aclr", type=float, default=1.0)
     parser.add_argument("--cn_learning_rate", "-clr", type=float, default=3e-4)
     parser.add_argument("--cn_reg_coeff", "-crc", type=float, default=0)
@@ -413,6 +416,7 @@ def main():
     # ======================== Expert Data ========================== #
     parser.add_argument('--expert_path', '-ep', type=str, default='icrl/expert_data/HCWithPos-vm0')
     parser.add_argument('--expert_rollouts', '-er', type=int, default=20)
+    parser.add_argument("--log_file", "-l", help="log file", dest="LOG_FILE_PATH", default=None, required=False)
     # =============================================================== #
     # =============================================================== #
 
@@ -436,32 +440,51 @@ def main():
 
     # Choose seed
     if config["seed"] is None:
-        config["seed"] = np.random.randint(0,100)
+        config["seed"] = np.random.randint(0, 100)
 
     # Get name by concatenating arguments with non-default values. Default
     # values are either the one specified in config file or in parser (if both
     # are present then the one in config file is prioritized)
     config["name"] = utils.get_name(parser, default_config, config, mod_name)
 
+    config = Dict2Obj(config)
     # Initialize W&B project
-    wandb.init(project=config["project"], name=config["name"], config=config, dir="./icrl",
-               group=config["group"])
-    wandb.config.save_dir = wandb.run.dir
-    config = wandb.config
-
+    # wandb.init(project=config["project"], name=config["name"], config=config, dir="./icrl",
+    #            group=config["group"])
+    # wandb.config.save_dir = wandb.run.dir
+    # config = wandb.config
+    config.save_dir = "./icrl/save_models/{0}".format(config.name)
+    os.mkdir(config.save_dir)
     print(utils.colorize("Configured folder %s for saving" % config.save_dir,
-        color="green", bold=True))
+                         color="green", bold=True))
     print(utils.colorize("Name: %s" % config.name, color="green", bold=True))
 
     # Save config
+    # tmp = config.as_dict()
     utils.save_dict_as_json(config.as_dict(), config.save_dir, "config")
 
     # Train
     icrl(config)
 
     end = time.time()
-    print(utils.colorize("Time taken: %05.2f hours" % ((end-start)/3600),
-        color="green", bold=True))
+    print(utils.colorize("Time taken: %05.2f hours" % ((end - start) / 3600),
+                         color="green", bold=True))
 
-if __name__=='__main__':
+
+class Dict2Obj(object):
+    """
+    Turns a dictionary into a class
+    """
+
+    # ----------------------------------------------------------------------
+    def __init__(self, dictionary):
+        """Constructor"""
+        for key in dictionary:
+            setattr(self, key, dictionary[key])
+
+    def as_dict(self):
+        return dict((key, value) for (key, value) in self.__dict__.items())
+
+
+if __name__ == '__main__':
     main()

@@ -11,7 +11,7 @@ from collections.abc import Callable
 import custom_envs
 import gym
 import numpy as np
-#import safety_gym
+# import safety_gym
 import stable_baselines3.common.callbacks as callbacks
 import stable_baselines3.common.vec_env as vec_env
 import torch as th
@@ -24,9 +24,9 @@ from stable_baselines3.common.vec_env import (VecCostWrapper,
 from stable_baselines3.common.vec_env.base_vec_env import VecEnv
 from tqdm import tqdm
 
-#==============================================================================
+# ==============================================================================
 # Functions to handle parser.
-#==============================================================================
+# ==============================================================================
 
 color2num = dict(
     gray=30,
@@ -40,6 +40,7 @@ color2num = dict(
     crimson=38
 )
 
+
 def colorize(string, color, bold=False, highlight=False):
     attr = []
     num = color2num[color]
@@ -47,6 +48,7 @@ def colorize(string, color, bold=False, highlight=False):
     attr.append(str(num))
     if bold: attr.append('1')
     return '\x1b[%sm%s\x1b[0m' % (';'.join(attr), string)
+
 
 def concat_nondefault_arguments(parser, ignore_keys=[], path_keys=[],
                                 default_config=None, actual_config=None):
@@ -114,8 +116,9 @@ def concat_nondefault_arguments(parser, ignore_keys=[], path_keys=[],
                         if v == 0:
                             valstr = 0
                         else:
-                            valstr = round(v, 4-int(math.floor(math.log10(abs(v))))-1)
-                    else: valstr = v
+                            valstr = round(v, 4 - int(math.floor(math.log10(abs(v)))) - 1)
+                    else:
+                        valstr = v
                     concat += '%s_' % str(valstr)
 
         # Add key, value to concat.
@@ -128,8 +131,9 @@ def concat_nondefault_arguments(parser, ignore_keys=[], path_keys=[],
                 if value == 0:
                     valstr = 0
                 else:
-                    valstr = round(value, 4-int(math.floor(math.log10(abs(value))))-1)
-            else: valstr = value
+                    valstr = round(value, 4 - int(math.floor(math.log10(abs(value)))) - 1)
+            else:
+                valstr = value
             concat += '%s_%s_' % (sl_map[key], valstr)
 
     if len(concat) > 0:
@@ -137,6 +141,7 @@ def concat_nondefault_arguments(parser, ignore_keys=[], path_keys=[],
         concat = concat[:-1]
 
     return concat
+
 
 def get_sl_map(parser):
     """Return a dictionary containing short-long name mapping in parser."""
@@ -146,7 +151,7 @@ def get_sl_map(parser):
     for key in parser._option_string_actions.keys():
         if key[1] == '-':
             options = parser._option_string_actions[key].option_strings
-            if len(options) == 1:   # No short argument.
+            if len(options) == 1:  # No short argument.
                 sl_map[key[2:]] = key[2:]
             else:
                 if options[0][1] == '-':
@@ -163,15 +168,17 @@ def get_sl_map(parser):
 
     return sl_map
 
+
 def reverse_dict(x):
     """
     Exchanges keys and values in x i.e. x[k] = v ---> x[v] = k.
     Added Because reversed(x) does not work in python 3.7.
     """
     y = {}
-    for k,v in x.items():
+    for k, v in x.items():
         y[v] = k
     return y
+
 
 def merge_configs(config, parser, sys_argv):
     """
@@ -186,6 +193,7 @@ def merge_configs(config, parser, sys_argv):
 
     sl_map = get_sl_map(parser)
     rev_sl_map = reverse_dict(sl_map)
+
     def other_name(key):
         if key in sl_map:
             return sl_map[key]
@@ -212,26 +220,28 @@ def merge_configs(config, parser, sys_argv):
 
     return merged_config
 
+
 def key_was_specified(key1, key2, sys_argv):
     for arg in sys_argv:
         if arg[0] == '-' and (key1 == arg.strip('-') or key2 == arg.strip('-')):
             return True
     return False
 
+
 def get_name(parser, default_config, actual_config, mod_name):
     """Returns a name for the experiment based on parameters passed."""
-    prefix = lambda x, y: x + '_'*(len(y)>0) + y
+    prefix = lambda x, y: x + '_' * (len(y) > 0) + y
 
     name = actual_config["name"]
     if name is None:
         name = concat_nondefault_arguments(
-                parser,
-                ignore_keys=["config_file", "train_env_id", "eval_env_id", "seed",
-                             "timesteps", "save_every", "e)val_every", "n_iters",
-                             "sync_wandb", "file_to_run", "project", "group"],
-                path_keys=["expert_path"],
-                default_config=default_config,
-                actual_config=actual_config
+            parser,
+            ignore_keys=["config_file", "train_env_id", "eval_env_id", "seed",
+                         "timesteps", "save_every", "e)val_every", "n_iters",
+                         "sync_wandb", "file_to_run", "project", "group"],
+            path_keys=["expert_path"],
+            default_config=default_config,
+            actual_config=actual_config
         )
         if len(mod_name) > 0:
             name = prefix(mod_name.split('.')[-1], name)
@@ -249,6 +259,7 @@ def get_name(parser, default_config, actual_config, mod_name):
 
     return name
 
+
 # =============================================================================
 # Gym utilities
 # =============================================================================
@@ -259,8 +270,10 @@ def make_env(env_id, rank, log_dir, seed=0):
         env.seed(seed + rank)
         env = Monitor(env, log_dir)
         return env
+
     set_random_seed(seed)
     return _init
+
 
 def make_train_env(env_id, save_dir, use_cost_wrapper, base_seed=0, num_threads=1,
                    normalize_obs=True, normalize_reward=True, normalize_cost=True,
@@ -271,21 +284,22 @@ def make_train_env(env_id, save_dir, use_cost_wrapper, base_seed=0, num_threads=
     if use_cost_wrapper:
         env = vec_env.VecCostWrapper(env)
     if normalize_reward and normalize_cost:
-        assert(all(key in kwargs for key in ['cost_info_str','reward_gamma','cost_gamma']))
+        assert (all(key in kwargs for key in ['cost_info_str', 'reward_gamma', 'cost_gamma']))
         env = vec_env.VecNormalizeWithCost(
-                env, training=True, norm_obs=normalize_obs, norm_reward=normalize_reward,
-                norm_cost=normalize_cost, cost_info_str=kwargs['cost_info_str'],
-                reward_gamma=kwargs['reward_gamma'], cost_gamma=kwargs['cost_gamma'])
+            env, training=True, norm_obs=normalize_obs, norm_reward=normalize_reward,
+            norm_cost=normalize_cost, cost_info_str=kwargs['cost_info_str'],
+            reward_gamma=kwargs['reward_gamma'], cost_gamma=kwargs['cost_gamma'])
     elif normalize_reward:
-        assert(all(key in kwargs for key in ['reward_gamma']))
+        assert (all(key in kwargs for key in ['reward_gamma']))
         env = vec_env.VecNormalizeWithCost(
-                env, training=True, norm_obs=normalize_obs, norm_reward=normalize_reward,
-                norm_cost=normalize_cost, reward_gamma=kwargs['reward_gamma'])
+            env, training=True, norm_obs=normalize_obs, norm_reward=normalize_reward,
+            norm_cost=normalize_cost, reward_gamma=kwargs['reward_gamma'])
     else:
         env = vec_env.VecNormalizeWithCost(
-                env, training=True, norm_obs=normalize_obs, norm_reward=normalize_reward,
-                norm_cost=normalize_cost)
+            env, training=True, norm_obs=normalize_obs, norm_reward=normalize_reward,
+            norm_cost=normalize_cost)
     return env
+
 
 def make_eval_env(env_id, use_cost_wrapper, normalize_obs=True):
     env = [lambda: gym.make(env_id)]
@@ -302,6 +316,7 @@ def make_eval_env(env_id, use_cost_wrapper, normalize_obs=True):
 
     return env
 
+
 def eval_and_make_video(env, model, folder, name_prefix, n_rollouts=3, deterministic=False):
     """This will also close the environment"""
     video_length = int(n_rollouts * env.get_attr('spec')[0].max_episode_steps)
@@ -313,12 +328,13 @@ def eval_and_make_video(env, model, folder, name_prefix, n_rollouts=3, determini
                                    video_length=video_length,
                                    name_prefix=name_prefix)
     mean_reward, std_reward = evaluate_policy(
-            model, env, n_eval_episodes=n_rollouts, deterministic=deterministic
+        model, env, n_eval_episodes=n_rollouts, deterministic=deterministic
     )
     print("Mean reward: %f +/- %f." % (mean_reward, std_reward))
 
     # Save the video
     env.close()
+
 
 def sample_from_agent(agent, env, rollouts):
     if isinstance(env, vec_env.VecEnv):
@@ -355,6 +371,7 @@ def sample_from_agent(agent, env, rollouts):
     lengths = np.array(lengths)
 
     return orig_observations, observations, actions, rewards, lengths
+
 
 def sample_from_agent_airl(agent, env, rollouts):
     # Generates data in 'airl' scheme
@@ -432,9 +449,10 @@ def compute_kl(agent_2, observations, actions, agent_1=None):
     if agent_1 is not None:
         kl += log_prob(agent_1)
 
-    kl = kl.sum()/observations.shape[0]
+    kl = kl.sum() / observations.shape[0]
 
     return kl.item()
+
 
 # =============================================================================
 # File handlers
@@ -442,32 +460,36 @@ def compute_kl(agent_2, observations, actions, agent_1=None):
 
 def save_dict_as_json(dic, save_dir, name=None):
     if name is not None:
-        save_dir = os.path.join(save_dir, name+".json")
+        save_dir = os.path.join(save_dir, name + ".json")
     with open(save_dir, 'w') as out:
-        out.write(json.dumps(dic, separators=(',\n','\t:\t'),
-                  sort_keys=True))
+        out.write(json.dumps(dic, separators=(',\n', '\t:\t'),
+                             sort_keys=True))
+
 
 def load_dict_from_json(load_from, name=None):
     if name is not None:
-        load_from = os.path.join(load_from, name+".json")
+        load_from = os.path.join(load_from, name + ".json")
     with open(load_from, "rb") as f:
         dic = json.load(f)
 
     return dic
 
+
 def save_dict_as_pkl(dic, save_dir, name=None):
     if name is not None:
-        save_dir = os.path.join(save_dir, name+".pkl")
+        save_dir = os.path.join(save_dir, name + ".pkl")
     with open(save_dir, 'wb') as out:
         pickle.dump(dic, out, protocol=pickle.HIGHEST_PROTOCOL)
 
+
 def load_dict_from_pkl(load_from, name=None):
     if name is not None:
-        load_from = os.path.join(load_from, name+".pkl")
+        load_from = os.path.join(load_from, name + ".pkl")
     with open(load_from, "rb") as out:
         dic = pickle.load(out)
 
     return dic
+
 
 # =============================================================================
 # Custom callbacks
@@ -477,6 +499,7 @@ class ProgressBarCallback(callbacks.BaseCallback):
     """
     :param pbar: (tqdm.pbar) Progress bar object
     """
+
     def __init__(self, pbar):
         super(ProgressBarCallback, self).__init__()
         self._pbar = pbar
@@ -491,33 +514,36 @@ class ProgressBarCallback(callbacks.BaseCallback):
         average_cost = safe_mean(self.model.rollout_buffer.orig_costs)
         total_cost = np.sum(self.model.rollout_buffer.orig_costs)
         self._pbar.set_postfix(
-                tr='%05.1f' % total_reward,
-                ac='%05.3f' % average_cost,
-                tc='%05.1f' % total_cost,
-                nu='%05.1f' % self.model.dual.nu().item()
+            tr='%05.1f' % total_reward,
+            ac='%05.3f' % average_cost,
+            tc='%05.1f' % total_cost,
+            nu='%05.1f' % self.model.dual.nu().item()
         )
+
 
 # This callback should be used with the 'with' block, to allow for correct
 # initialisation and destruction
 class ProgressBarManager:
-    def __init__(self, total_timesteps): # init object with total timesteps
+    def __init__(self, total_timesteps):  # init object with total timesteps
         self.pbar = None
         self.total_timesteps = int(total_timesteps)
 
-    def __enter__(self): # create the progress bar and callback, return the callback
+    def __enter__(self):  # create the progress bar and callback, return the callback
         self.pbar = tqdm(total=self.total_timesteps, dynamic_ncols=True)
         return ProgressBarCallback(self.pbar)
 
-    def __exit__(self, exc_type, exc_val, exc_tb): # close the callback
+    def __exit__(self, exc_type, exc_val, exc_tb):  # close the callback
         self.pbar.n = self.total_timesteps
         self.pbar.update(0)
         self.pbar.close()
+
 
 class LogTorqueCallback(callbacks.BaseCallback):
     """
     This callback logs stats about actions.
     """
-    def __init__(self, verbose: int=1):
+
+    def __init__(self, verbose: int = 1):
         super(LogTorqueCallback, self).__init__(verbose)
 
     def _init_callback(self):
@@ -531,21 +557,23 @@ class LogTorqueCallback(callbacks.BaseCallback):
         greater_than_50 = np.sum(np.any(actions_abs > 0.5, axis=-1))
         greater_than_30 = np.sum(np.any(actions_abs > 0.3, axis=-1))
         greater_than_25 = np.sum(np.any(actions_abs > 0.25, axis=-1))
-        mean_torque = np.mean(actions_abs, axis=(0,1))
-        #var_torque = np.var(action_abs, axis=0)
+        mean_torque = np.mean(actions_abs, axis=(0, 1))
+        # var_torque = np.var(action_abs, axis=0)
         self.logger.record('torque/greater_than_0.5', greater_than_50)
         self.logger.record('torque/greater_than_0.3', greater_than_30)
         self.logger.record('torque/greater_than_0.25', greater_than_25)
         for i in range(mean_torque.shape[0]):
-            self.logger.record('torque/mean_motor'+str(i),mean_torque[i])
+            self.logger.record('torque/mean_motor' + str(i), mean_torque[i])
+
 
 class AdjustedRewardCallback(callbacks.BaseCallback):
     """
     This callback computes an estimate of adjusted reward i.e. R + lambda*C.
     """
-    def __init__(self, cost_fn, verbose: int=1):
+
+    def __init__(self, cost_fn, verbose: int = 1):
         super(AdjustedRewardCallback, self).__init__(verbose)
-        self.history = []        # Use for smoothing if needed
+        self.history = []  # Use for smoothing if needed
         self.cost_fn = cost_fn
 
     def _init_callback(self):
@@ -559,7 +587,7 @@ class AdjustedRewardCallback(callbacks.BaseCallback):
         costs = self.model.rollout_buffer.costs.copy()
         if isinstance(self.training_env, vec_env.VecNormalize):
             rewards = self.training_env.unnormalize_reward(rewards)
-        adjusted_reward = (np.mean(rewards - self.model.dual.nu().item()*costs))
+        adjusted_reward = (np.mean(rewards - self.model.dual.nu().item() * costs))
         self.logger.record("rollout/adjusted_reward", float(adjusted_reward))
         if self.cost_fn is not None:
             obs = self.model.rollout_buffer.orig_observations.copy()
@@ -567,19 +595,21 @@ class AdjustedRewardCallback(callbacks.BaseCallback):
             cost = np.mean(self.cost_fn(obs, acs))
             self.logger.record("eval/true_cost", float(cost))
 
+
 class PlotCallback(callbacks.BaseCallback):
     """
     This callback can be used/modified to fetch something from the buffer and make a
     plot using some custom plot function.
     """
+
     def __init__(
-        self,
-        plot_fn,
-        train_env_id: str,
-        plot_freq: int = 10000,
-        log_path: str = None,
-        plot_save_dir: str = None,
-        verbose: int = 1,
+            self,
+            plot_fn,
+            train_env_id: str,
+            plot_freq: int = 10000,
+            log_path: str = None,
+            plot_save_dir: str = None,
+            verbose: int = 1,
     ):
         super(PlotCallback, self).__init__(verbose)
         self.plot_fn = plot_fn
@@ -597,12 +627,13 @@ class PlotCallback(callbacks.BaseCallback):
     def _on_rollout_end(self):
         try:
             obs = self.model.rollout_buffer.orig_observations.copy()
-        except: # PPO uses rollout buffer which does not store orig_observations
+        except:  # PPO uses rollout buffer which does not store orig_observations
             obs = self.model.rollout_buffer.observations.copy()
             # unormalize observations
             obs = self.training_env.unnormalize_obs(obs)
-        obs = obs.reshape(-1, obs.shape[-1])    # flatten the batch size and num_envs dimensions
-        self.plot_fn(obs, os.path.join(self.plot_save_dir, str(self.num_timesteps)+".png"))
+        obs = obs.reshape(-1, obs.shape[-1])  # flatten the batch size and num_envs dimensions
+        self.plot_fn(obs, os.path.join(self.plot_save_dir, str(self.num_timesteps) + ".png"))
+
 
 class SaveEnvStatsCallback(callbacks.BaseCallback):
     def __init__(
@@ -618,6 +649,7 @@ class SaveEnvStatsCallback(callbacks.BaseCallback):
         if isinstance(self.env, vec_env.VecNormalize):
             self.env.save(os.path.join(self.save_path, "train_env_stats.pkl"))
 
+
 # =============================================================================
 # Miscellaneous
 # =============================================================================
@@ -627,11 +659,14 @@ def del_and_make(d):
         shutil.rmtree(d)
     os.makedirs(d)
 
+
 def dict_to_nametuple(dic):
     return collections.namedtuple("NamedTuple", dic)(**dic)
 
+
 def dict_to_namespace(dic):
     return types.SimpleNamespace(**dic)
+
 
 def get_net_arch(config):
     """
@@ -639,20 +674,21 @@ def get_net_arch(config):
     value network and cost value network.
     """
     try:
-        separate_layers = dict(pi=config.policy_layers,    # Policy Layers
-                           vf=config.reward_vf_layers, # Value Function Layers
-                           cvf=config.cost_vf_layers)  # Cost Value Function Layers
+        separate_layers = dict(pi=config.policy_layers,  # Policy Layers
+                               vf=config.reward_vf_layers,  # Value Function Layers
+                               cvf=config.cost_vf_layers)  # Cost Value Function Layers
     except:
-        print("Could not define layers for policy, value func and "+ \
-               "cost_value_function, will attempt to just define "+ \
-               "policy and value func")
-        separate_layers = dict(pi=config.policy_layers,    # Policy Layers
-                               vf=config.reward_vf_layers) # Value Function Layers
+        print("Could not define layers for policy, value func and " + \
+              "cost_value_function, will attempt to just define " + \
+              "policy and value func")
+        separate_layers = dict(pi=config.policy_layers,  # Policy Layers
+                               vf=config.reward_vf_layers)  # Value Function Layers
 
     if config.shared_layers is not None:
         return [*config.shared_layers, separate_layers]
     else:
         return [separate_layers]
+
 
 def get_sid():
     try:
@@ -666,10 +702,12 @@ def get_sid():
         sid = -1
     return str(sid)
 
+
 def sync_wandb(folder, timeout=None):
     folder = folder.strip("/files")
     print(colorize("\nSyncing %s to wandb" % folder, "green", bold=True))
     run_bash_cmd("wandb sync %s" % folder, timeout)
+
 
 def run_bash_cmd(cmd, timeout=None):
     process = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
