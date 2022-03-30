@@ -1,3 +1,4 @@
 *.pyc
 icrl/save_models/*
 icrl/__pycache__/
+slurm*
