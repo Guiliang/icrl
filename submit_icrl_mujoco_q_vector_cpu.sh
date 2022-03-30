@@ -1,11 +1,10 @@
 #!/bin/bash
-#SBATCH -N 1
-#SBATCH --gres=gpu:1
-#SBATCH -p cpu
-#SBATCH --cpus-per-task=8
-#SBATCH --time=96:00:00
+#SBATCH --ntasks=1
+#SBATCH -t 96:00:00
+#SBATCH -J Mujoco
 #SBATCH --mem=64GB
-#SBATCH --job-name=Mojuco
+#SBATCH --gres=gpu:0
+#SBATCH -p cpu
 task_name="train-Mojuco-ICRL"
 launch_time=$(date +"%H:%M-%m-%d-%y")
 log_dir="log-${task_name}-${launch_time}.out"
