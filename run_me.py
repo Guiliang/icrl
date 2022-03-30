@@ -1,4 +1,8 @@
+import os
 import sys
+cwd = os.getcwd()
+sys.path.append(cwd + "/custom_envs")
+print(sys.path)
 
 if __name__ == "__main__":
 #    from icrl.constraint_net import main
