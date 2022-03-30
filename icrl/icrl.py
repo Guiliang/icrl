@@ -43,7 +43,7 @@ def load_expert_data(expert_path, num_rollouts):
     return (expert_obs, expert_acs), expert_mean_reward
 
 
-def icrl(config):
+def icrl(config, log_file):
     # We only want to use cost wrapper for custom environments
     use_cost_wrapper_train = True
     use_cost_wrapper_eval = False
@@ -83,7 +83,10 @@ def icrl(config):
     # expert_agent = PPOLagrangian.load(os.path.join(config.expert_path, "files/best_model.zip"))
 
     # Logger
-    icrl_logger = logger.HumanOutputFormat(sys.stdout)
+    if log_file is None:
+        icrl_logger = logger.HumanOutputFormat(sys.stdout)
+    else:
+        icrl_logger = logger.HumanOutputFormat(log_file)
 
     # Initialize constraint net, true constraint net
     cn_lr_schedule = lambda x: (config.anneal_clr_by_factor ** (config.n_iters * (1 - x))) * config.cn_learning_rate
@@ -186,7 +189,7 @@ def icrl(config):
     # Warmup
     timesteps = 0.
     if config.warmup_timesteps is not None:
-        print(utils.colorize("\nWarming up", color="green", bold=True))
+        print(utils.colorize("\nWarming up", color="green", bold=True), file=log_file, flush=True)
         with utils.ProgressBarManager(config.warmup_timesteps) as callback:
             nominal_agent.learn(total_timesteps=config.warmup_timesteps,
                                 cost_function=null_cost,  # During warmup we dont want to incur any cost
@@ -195,12 +198,12 @@ def icrl(config):
 
     # Train
     start_time = time.time()
-    print(utils.colorize("\nBeginning training", color="green", bold=True), flush=True)
+    print(utils.colorize("\nBeginning training", color="green", bold=True), file=log_file, flush=True)
     # best_true_reward, best_true_cost, best_forward_kl, best_reverse_kl = -np.inf, np.inf, np.inf, np.inf
     best_true_reward, best_true_cost = -np.inf, np.inf
     for itr in range(config.n_iters):
         if config.reset_policy and itr != 0:
-            print(utils.colorize("Resetting agent", color="green", bold=True), flush=True)
+            print(utils.colorize("Resetting agent", color="green", bold=True), file=log_file, flush=True)
             nominal_agent = create_nominal_agent()
         current_progress_remaining = 1 - float(itr) / float(config.n_iters)
 
@@ -264,7 +267,7 @@ def icrl(config):
                 train_env.save(os.path.join(path, f"{itr}_train_env_stats.pkl"))
         # (2): Best model
         if average_true_reward > best_true_reward:
-            print(utils.colorize("Saving new best model", color="green", bold=True), flush=True)
+            print(utils.colorize("Saving new best model", color="green", bold=True), file=log_file, flush=True)
             nominal_agent.save(os.path.join(config.save_dir, "best_nominal_model"))
             constraint_net.save(os.path.join(config.save_dir, "best_cn_model.pt"))
             if isinstance(train_env, VecNormalize):
@@ -416,7 +419,7 @@ def main():
     # ======================== Expert Data ========================== #
     parser.add_argument('--expert_path', '-ep', type=str, default='icrl/expert_data/HCWithPos-vm0')
     parser.add_argument('--expert_rollouts', '-er', type=int, default=20)
-    parser.add_argument("--log_file", "-l", help="log file", dest="LOG_FILE_PATH", default=None, required=False)
+    parser.add_argument("--log_file", "-l", help="log file", default=None, required=False)
     # =============================================================== #
     # =============================================================== #
 
@@ -432,6 +435,12 @@ def main():
             default_config = utils.load_dict_from_json(args["config_file"])
         else:
             raise ValueError("Invalid type of config file")
+
+    log_file_path = args["log_file"]
+    if log_file_path is not None:
+        log_file = open(log_file_path, 'w')
+    else:
+        log_file = None
 
     # Overwrite config file with parameters supplied through parser
     # Order of priority: supplied through command line > specified in config
@@ -456,19 +465,19 @@ def main():
     config.save_dir = "./icrl/save_models/{0}".format(config.name)
     os.mkdir(config.save_dir)
     print(utils.colorize("Configured folder %s for saving" % config.save_dir,
-                         color="green", bold=True))
-    print(utils.colorize("Name: %s" % config.name, color="green", bold=True))
+                         color="green", bold=True), file=log_file, flush=True)
+    print(utils.colorize("Name: %s" % config.name, color="green", bold=True), file=log_file, flush=True)
 
     # Save config
     # tmp = config.as_dict()
     utils.save_dict_as_json(config.as_dict(), config.save_dir, "config")
 
     # Train
-    icrl(config)
+    icrl(config, log_file)
 
     end = time.time()
     print(utils.colorize("Time taken: %05.2f hours" % ((end - start) / 3600),
-                         color="green", bold=True))
+                         color="green", bold=True), file=log_file, flush=True)
 
 
 class Dict2Obj(object):
