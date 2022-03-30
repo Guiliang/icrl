@@ -1,2 +1,3 @@
 *.pyc
 icrl/save_models/*
+__pycache__/
