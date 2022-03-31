@@ -1,2 +1,1 @@
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/g233liu/.mujoco/mujoco210/bin:/usr/lib/nvidia
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/nvidia
