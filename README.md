@@ -9,7 +9,7 @@ It is recommended to use Python 3.8 to run this code within a virtual environmen
 ```bash
 pip install 'mujoco-py<2.1,>=2.0'
 pip install wandb==0.10.12 torch==1.5.0 gym==0.15.7 matplotlib==3.3.2 numpy==1.17.5 cloudpickle==1.2.2 tqdm pandas pillow psutil mpl-scatter-density
-pip install wandb==0.10.12 torch==1.5.0 gym==0.21.0 matplotlib numpy cloudpickle tqdm pandas pillow psutil mpl-scatter-density
+pip install wandb==0.10.12 torch==1.5.0 gym==0.21.0 pickel5 matplotlib numpy cloudpickle tqdm pandas pillow psutil mpl-scatter-density
 pip install -e ./custom_envs # To access custom environments through gym interface
 ```
 

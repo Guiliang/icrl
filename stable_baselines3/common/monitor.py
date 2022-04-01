@@ -49,7 +49,7 @@ class Monitor(gym.Wrapper):
                     filename = filename + "." + Monitor.EXT
             self.file_handler = open(filename, "wt")
             self.file_handler.write("#%s\n" % json.dumps({"t_start": self.t_start, "env_id": env.spec and env.spec.id}))
-            self.logger = csv.DictWriter(self.file_handler, fieldnames=("r", "l", "t") + reset_keywords + info_keywords + track_keywords)
+            self.logger = csv.DictWriter(self.file_handler, fieldnames=("r", "l", "t", "c") + reset_keywords + info_keywords + track_keywords)
             self.logger.writeheader()
             self.file_handler.flush()
 
@@ -63,6 +63,7 @@ class Monitor(gym.Wrapper):
         self.episode_lengths = []
         self.episode_times = []
         self.total_steps = 0
+        self.is_constraint_break = 0
         self.current_reset_info = {}  # extra info about the current episode, that was passed in during reset()
 
     def reset(self, **kwargs) -> np.ndarray:
@@ -98,6 +99,9 @@ class Monitor(gym.Wrapper):
         if self.needs_reset:
             raise RuntimeError("Tried to step environment that needs reset")
         observation, reward, done, info = self.env.step(action)
+
+        if info['xpos'] <= -3:
+            self.is_constraint_break = 1
         self.rewards.append(reward)
         for key in self.track_keywords:
             if key not in info:
@@ -107,7 +111,10 @@ class Monitor(gym.Wrapper):
             self.needs_reset = True
             ep_rew = sum(self.rewards)
             ep_len = len(self.rewards)
-            ep_info = {"r": round(ep_rew, 6), "l": ep_len, "t": round(time.time() - self.t_start, 6)}
+            ep_info = {"r": round(ep_rew, 6),
+                       "l": ep_len,
+                       "t": round(time.time() - self.t_start, 6),
+                       'c': self.is_constraint_break}
             for key in self.info_keywords:
                 ep_info[key] = info[key]
             for key in self.track_keywords:
