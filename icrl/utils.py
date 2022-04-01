@@ -238,7 +238,7 @@ def get_name(parser, default_config, actual_config, mod_name):
             parser,
             ignore_keys=["config_file", "train_env_id", "eval_env_id", "seed",
                          "timesteps", "save_every", "e)val_every", "n_iters",
-                         "sync_wandb", "file_to_run", "project", "group"],
+                         "sync_wandb", "file_to_run", "project", "group", "log_file"],
             path_keys=["expert_path"],
             default_config=default_config,
             actual_config=actual_config
