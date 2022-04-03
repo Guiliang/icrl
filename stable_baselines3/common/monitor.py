@@ -86,7 +86,6 @@ class Monitor(gym.Wrapper):
                 raise ValueError("Expected you to pass kwarg {} into reset".format(key))
             self.current_reset_info[key] = value
         self.track = {key: [] for key in self.track_keywords}
-        self.is_constraint_break = 0
         return self.env.reset(**kwargs)
 
     def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, Dict[Any, Any]]:
@@ -127,6 +126,7 @@ class Monitor(gym.Wrapper):
                 self.logger.writerow(ep_info)
                 self.file_handler.flush()
             info["episode"] = ep_info
+            self.is_constraint_break = 0
         self.total_steps += 1
         return observation, reward, done, info
 
